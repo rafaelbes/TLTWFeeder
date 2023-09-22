@@ -11,7 +11,7 @@ This tool is useful for who use:
 
 - TreeLine is an useful tool that provide a hierarchical view of itens
 - TaskWarrior is an incredible task management tool
-- GTD is a produtivity method
+- GTD is a productivity method
 
 ## TreeLine setup
 
@@ -41,3 +41,7 @@ uda.estimated.label=estimated
 uda.tuid.type=string
 uda.tuid.label=TreeLine
 ```
+
+## What it does
+
+updateTaskWarrior.py check, for each Action itens, if it is already on TaskWarrior using the TreeLine UID (tuid). In this case, the TaskWarrior task is updated. Otherwise, a new task is added. After that, updateTaskWarrior.py output all TaskWarrior itens that do not have their 'tuid' in TreeLine (this is useful as you can just delete directly on TreeLine and with this list, mark all of them as done on TaskWarrior).
