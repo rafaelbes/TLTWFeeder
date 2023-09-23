@@ -1,5 +1,8 @@
 # TLTWFeeder
+
 Python tool to sync action itens from TreeLine to TaskWarrior tasks
+
+**CAUTION: This tool is still under development and has not been thoroughly tested. It may not behave as expected, so use it with extreme caution and always back up your data.**
 
 # Introduction
 
