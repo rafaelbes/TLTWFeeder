@@ -30,14 +30,17 @@ name_uid = {}
 
 energy_uid = {}
 priority_uid = {}
+project_priority_uid = {}
 estimatedtime_uid = {}
 duedatetime_uid = {}
 horariocomercial_uid = {}
+format_uid = {}
 
 action_uid_list = []
 next_uid_list = []
 wait_uid_list = []
 check_uid_list = []
+redprojects_list = []
 
 tags = {}
 hide = {}
@@ -45,7 +48,7 @@ hide = {}
 # Get the current datetime
 current_datetime = datetime.now()
 is_weekday = current_datetime.weekday() in range(0, 5)
-is_working_hours = time(8, 0) <= current_datetime.time() <= time(16, 0)
+is_working_hours = time(7, 0) <= current_datetime.time() <= time(16, 0)
 is_weekday_and_working_hours = is_weekday and is_working_hours
 
 file_path = "/home/rafael/projetos.trln"
@@ -56,12 +59,19 @@ for i in data['nodes']:
         tags_uid[current_uid] = i['data']['Nome']
     if i['format'] == 'Project':
         projects_uid[current_uid] = i['data']['Nome']
-    if i['format'] == 'HideProject' or i['format'] == 'RedProject':
+    if i['format'] == 'HideProject':
         hide_projects_uid[current_uid] = i['data']['Nome']
     if i['format'] == 'Espera':
         wait_uid_list.append(current_uid)
     if i['format'] == 'Checagem':
         check_uid_list.append(current_uid)
+    if i['format'] == 'RedProject':
+        redprojects_list.append(current_uid)
+        project_priority_uid[current_uid] = 'H'
+    if i['format'] == 'YellowProject':
+        project_priority_uid[current_uid] = 'M'
+    if i['format'] == 'GreenProject':
+        project_priority_uid[current_uid] = 'L'
     if i['format'] == 'Action':
         action_uid_list.append(current_uid)
         #print(f'Detected action: {i["data"]}')
@@ -77,15 +87,14 @@ for i in data['nodes']:
             else:
                 duedatetime_uid[current_uid] = convert_to_taskwarrior_format(i['data']['DueDateTime'])
         if 'HorarioComercial' in i['data']:
-            print(f"Horario comercial em {i['data']['Nome']}")
+            #print(f"Horario comercial em {i['data']['Nome']}")
             horariocomercial_uid[current_uid] = (i['data']['HorarioComercial'] == 'True')
     if i['format'] == 'Next':
         next_uid_list.append(current_uid)
 
     children_uid[current_uid] = i['children']
     name_uid[current_uid] = i['data']['Nome']
-
-print(f'Horario comercial: {is_weekday_and_working_hours}')
+    format_uid[current_uid] = i['format']
 
 for uid in tags_uid:
     s = [uid]
@@ -104,6 +113,18 @@ for uid in hide_projects_uid:
         for c in children_uid[k]:
             hide[c] = True
             s.append(c)
+
+for uid in project_priority_uid:
+    s = [uid]
+    while s != []:
+        k = s.pop()
+        for c in children_uid[k]:
+            if format_uid[c] == 'Action':
+                if not c in priority_uid:
+                    print(f'Prioridade de {name_uid[c]} direto para {project_priority_uid[k]}')
+                else:
+                    print(f'Prioridade de {name_uid[c]} vai de {priority_uid[c]} para {project_priority_uid[k]}')
+                priority_uid[c] = project_priority_uid[k]
 
 hidden_msgs = []
 blocked_msgs = []
@@ -142,33 +163,33 @@ for k in action_uid_list:
         execute_command(f'task tuid:{k} modify {currentTags} {desc} tuid:{k} energy:{energy} priority:{priority} estimated:{estimatedTime} due:{duedatetime} wait:{wait}')
 
 print()
-print('++ Hidden tasks:')
-for i in hidden_msgs:
-    print(i)
-
-print()
-print('++ Blocked tasks:')
-for i in blocked_msgs:
-    print(i)
+print('++ Projetos que urgem:')
+for k in redprojects_list:
+    desc = re.sub(r'[()/]', '', name_uid[k])
+    print(f'\033[31m- {desc}\033[0m')
 
 print()
 print('++ Added tasks:')
 for i in added_msgs:
-    print(i)
+    print("\033[32m" + i + "\033[0m")
 
 print()
-print('++ Wait list:')
+print('++ Atividades em espera:')
 for k in wait_uid_list:
     desc = re.sub(r'[()/]', '', name_uid[k])
-    print(f'- {desc}')
+    print(f'\033[36m- {desc}\033[0m')
 
 print()
-print('++ Check list:')
+print('++ Atividades para checar:')
 for k in check_uid_list:
     desc = re.sub(r'[()/]', '', name_uid[k])
-    print(f'- {desc}')
+    print(f'\033[33m- {desc}\033[0m')
 
 print()
-print('++ Tasks not met anymore on treeline:')
+print('++ Waiting Tasks not met anymore on treeline:')
 filter_str = " and ".join(f"tuid != {val}" for val in action_uid_list)
-subprocess.run(f'task esforco {filter_str}', shell=True)
+subprocess.run(f'task waiting {filter_str}', shell=True)
+print()
+print('++ Active Tasks not met anymore on treeline:')
+filter_str = " and ".join(f"tuid != {val}" for val in action_uid_list)
+subprocess.run(f'task esf {filter_str}', shell=True)
